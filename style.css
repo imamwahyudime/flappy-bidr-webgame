@@ -1,0 +1,111 @@
+/* General body styling */
+body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh; /* Use min-height for flexibility */
+    background-color: #87CEEB; /* Sky blue background */
+    margin: 0;
+    font-family: 'Press Start 2P', cursive; /* Apply game font */
+    overflow: hidden; /* Prevent scrollbars */
+    flex-direction: column; /* Stack canvas and info */
+    padding: 10px; /* Add some padding */
+    box-sizing: border-box;
+}
+
+/* Canvas styling */
+#gameCanvas {
+    background-color: #87CEEB; /* Match body background */
+    border: 5px solid #333;
+    display: block; /* Prevent extra space below canvas */
+    max-width: 100%; /* Ensure canvas doesn't exceed screen width */
+    max-height: 80vh; /* Limit canvas height */
+    aspect-ratio: 4 / 3; /* Maintain aspect ratio */
+    box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+    border-radius: 10px; /* Rounded corners */
+}
+
+/* Styling for the score/info container */
+.info-container {
+    text-align: center;
+    margin-top: 20px;
+    color: #fff;
+    background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent background */
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 1em; /* Adjust font size */
+}
+
+/* Style for message overlay */
+#messageOverlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 30px;
+    border-radius: 15px;
+    text-align: center;
+    font-size: 1.5em; /* Larger font for messages */
+    display: none; /* Hidden by default */
+    z-index: 10;
+    border: 3px solid #fff;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    /* Ensure flex properties for centering button */
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Styling for the restart button inside the overlay */
+#messageOverlay button {
+    font-family: 'Press Start 2P', cursive; /* Inherit game font */
+    padding: 10px 20px;
+    margin-top: 20px;
+    font-size: 0.8em;
+    cursor: pointer;
+    background-color: #4CAF50; /* Green */
+    color: white;
+    border: none;
+    border-radius: 5px;
+    box-shadow: 0 4px #999;
+    transition: background-color 0.2s, transform 0.1s, box-shadow 0.1s;
+}
+
+/* Active state for the button */
+#messageOverlay button:active {
+    background-color: #367c39;
+    box-shadow: 0 2px #666;
+    transform: translateY(2px);
+}
+
+/* Responsive adjustments for smaller screens */
+@media (max-width: 600px) {
+    .info-container {
+        font-size: 0.8em;
+    }
+    #messageOverlay {
+        font-size: 1.2em;
+        padding: 20px;
+    }
+     #messageOverlay button {
+        font-size: 0.7em;
+    }
+}
+
+/* Further adjustments for very small screens */
+ @media (max-width: 400px) {
+    .info-container {
+        font-size: 0.7em;
+    }
+    #messageOverlay {
+        font-size: 1em;
+        padding: 15px;
+        width: 80%; /* Make message box wider on small screens */
+    }
+     #messageOverlay button {
+        font-size: 0.6em;
+        padding: 8px 15px;
+    }
+}

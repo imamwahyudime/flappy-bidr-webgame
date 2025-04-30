@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flappy Bidr Clone</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh; /* Use min-height for flexibility */
+            background-color: #87CEEB; /* Sky blue background */
+            margin: 0;
+            font-family: 'Press Start 2P', cursive; /* Apply game font */
+            overflow: hidden; /* Prevent scrollbars */
+            flex-direction: column; /* Stack canvas and info */
+            padding: 10px; /* Add some padding */
+            box-sizing: border-box;
+        }
+        #gameCanvas {
+            background-color: #87CEEB; /* Match body background */
+            border: 5px solid #333;
+            display: block; /* Prevent extra space below canvas */
+            max-width: 100%; /* Ensure canvas doesn't exceed screen width */
+            max-height: 80vh; /* Limit canvas height */
+            aspect-ratio: 4 / 3; /* Maintain aspect ratio */
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+            border-radius: 10px; /* Rounded corners */
+        }
+        .info-container {
+            text-align: center;
+            margin-top: 20px;
+            color: #fff;
+            background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent background */
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 1em; /* Adjust font size */
+        }
+        /* Style for message overlay */
+        #messageOverlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            font-size: 1.5em; /* Larger font for messages */
+            display: none; /* Hidden by default */
+            z-index: 10;
+            border: 3px solid #fff;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        #messageOverlay button {
+            font-family: 'Press Start 2P', cursive;
+            padding: 10px 20px;
+            margin-top: 20px;
+            font-size: 0.8em;
+            cursor: pointer;
+            background-color: #4CAF50; /* Green */
+            color: white;
+            border: none;
+            border-radius: 5px;
+            box-shadow: 0 4px #999;
+            transition: background-color 0.2s, transform 0.1s, box-shadow 0.1s;
+        }
+        #messageOverlay button:active {
+            background-color: #367c39;
+            box-shadow: 0 2px #666;
+            transform: translateY(2px);
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 600px) {
+            .info-container {
+                font-size: 0.8em;
+            }
+            #messageOverlay {
+                font-size: 1.2em;
+                padding: 20px;
+            }
+             #messageOverlay button {
+                font-size: 0.7em;
+            }
+        }
+         @media (max-width: 400px) {
+            .info-container {
+                font-size: 0.7em;
+            }
+            #messageOverlay {
+                font-size: 1em;
+                padding: 15px;
+                width: 80%; /* Make message box wider on small screens */
+            }
+             #messageOverlay button {
+                font-size: 0.6em;
+                padding: 8px 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="gameCanvas"></canvas>
+    <div class="info-container">
+        Score: <span id="score">0</span> | High Score: <span id="highScore">0</span>
+        <div>Click, Tap, or Press Space to Flap</div>
+    </div>
+    <div id="messageOverlay">
+        <div id="messageText">Game Over!</div>
+        <button id="restartButton">Restart</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreDisplay = document.getElementById('score');
+        const highScoreDisplay = document.getElementById('highScore');
+        const messageOverlay = document.getElementById('messageOverlay');
+        const messageText = document.getElementById('messageText');
+        const restartButton = document.getElementById('restartButton');
+
+        // --- Game Constants ---
+        const BIRD_WIDTH = 30;
+        const BIRD_HEIGHT = 30;
+        const PIPE_WIDTH = 60;
+        const PIPE_GAP = 150; // Vertical gap between pipes
+        const GRAVITY = 0.4;
+        const FLAP_STRENGTH = -7; // Negative value for upward movement
+        const PIPE_SPEED = 3; // How fast pipes move left
+
+        // --- Game Variables ---
+        let birdX, birdY, birdVelocityY;
+        let pipes = []; // Array to hold pipe objects {x, y (top pipe bottom edge)}
+        let score;
+        let highScore;
+        let frameCount;
+        let gameStarted = false;
+        let gameOver = false;
+
+        // --- High Score Handling ---
+        function loadHighScore() {
+            const savedScore = localStorage.getItem('flappyHighScore');
+            highScore = savedScore ? parseInt(savedScore, 10) : 0;
+            highScoreDisplay.textContent = highScore;
+        }
+
+        function saveHighScore() {
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('flappyHighScore', highScore);
+                highScoreDisplay.textContent = highScore;
+            }
+        }
+
+        // --- Game Initialization ---
+        function resetGame() {
+            // Set initial bird position and velocity
+            birdX = canvas.width / 4;
+            birdY = canvas.height / 2 - BIRD_HEIGHT / 2;
+            birdVelocityY = 0;
+
+            // Reset pipes, score, and frame count
+            pipes = [];
+            score = 0;
+            frameCount = 0;
+            scoreDisplay.textContent = score;
+
+            // Reset game state flags
+            gameStarted = false;
+            gameOver = false;
+
+            // Hide game over message
+            messageOverlay.style.display = 'none';
+
+            // Start the first pipe generation
+            generatePipePair();
+
+            // Load high score initially
+            loadHighScore();
+
+            // Draw initial state (start screen)
+            draw();
+        }
+
+        // --- Pipe Generation ---
+        function generatePipePair() {
+            // Calculate random height for the top pipe's bottom edge
+            // Ensure the gap doesn't go off-screen
+            const minTopPipeHeight = 50;
+            const maxTopPipeHeight = canvas.height - PIPE_GAP - 50; // 50px buffer from bottom
+            const topPipeBottomY = Math.random() * (maxTopPipeHeight - minTopPipeHeight) + minTopPipeHeight;
+
+            pipes.push({
+                x: canvas.width, // Start pipe at the right edge
+                y: topPipeBottomY, // Bottom edge of the top pipe
+                passed: false // Flag to track if bird passed this pipe
+            });
+        }
+
+        // --- Input Handling ---
+        function flap() {
+            if (gameOver) return; // Don't flap if game is over
+
+            if (!gameStarted) {
+                gameStarted = true; // Start the game on first flap
+                gameLoop(); // Start the main game loop
+            }
+            birdVelocityY = FLAP_STRENGTH; // Apply upward velocity
+        }
+
+        // Event listeners for flap action
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+               if (gameOver) {
+                   resetGame(); // Restart on space if game over
+               } else {
+                   flap();
+               }
+            }
+        });
+        canvas.addEventListener('mousedown', () => {
+             if (gameOver) {
+                 resetGame(); // Restart on click if game over
+             } else {
+                 flap();
+             }
+        });
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault(); // Prevent default touch behavior (like scrolling)
+             if (gameOver) {
+                 resetGame(); // Restart on tap if game over
+             } else {
+                 flap();
+             }
+        }, { passive: false }); // Use passive: false to allow preventDefault
+
+        restartButton.addEventListener('click', resetGame);
+
+        // --- Collision Detection ---
+        function checkCollisions() {
+            // Ground collision
+            if (birdY + BIRD_HEIGHT > canvas.height) {
+                return true;
+            }
+            // Ceiling collision (less common but good to have)
+            if (birdY < 0) {
+                return true;
+            }
+
+            // Pipe collision
+            for (let pipe of pipes) {
+                const topPipeBottomY = pipe.y;
+                const bottomPipeTopY = pipe.y + PIPE_GAP;
+
+                // Check if bird is horizontally aligned with the current pipe
+                if (birdX + BIRD_WIDTH > pipe.x && birdX < pipe.x + PIPE_WIDTH) {
+                    // Check if bird hits the top OR bottom pipe
+                    if (birdY < topPipeBottomY || birdY + BIRD_HEIGHT > bottomPipeTopY) {
+                        return true; // Collision detected
+                    }
+                }
+            }
+            return false; // No collision
+        }
+
+        // --- Game Over ---
+        function triggerGameOver() {
+            gameOver = true;
+            gameStarted = false; // Stop the game loop implicitly
+            saveHighScore(); // Save score if it's a new high score
+            messageText.textContent = `Game Over! Score: ${score}`;
+            messageOverlay.style.display = 'flex'; // Show the overlay
+        }
+
+        // --- Drawing Functions ---
+        function drawBird() {
+            ctx.fillStyle = '#FFD700'; // Yellow bird
+            ctx.fillRect(birdX, birdY, BIRD_WIDTH, BIRD_HEIGHT);
+             // Simple eye for direction
+            ctx.fillStyle = '#000';
+            ctx.fillRect(birdX + BIRD_WIDTH * 0.6, birdY + BIRD_HEIGHT * 0.3, 5, 5);
+        }
+
+        function drawPipes() {
+            ctx.fillStyle = '#228B22'; // Green pipes
+            for (let pipe of pipes) {
+                // Draw top pipe (from top edge to gap start)
+                ctx.fillRect(pipe.x, 0, PIPE_WIDTH, pipe.y);
+                // Draw bottom pipe (from gap end to bottom edge)
+                const bottomPipeTopY = pipe.y + PIPE_GAP;
+                ctx.fillRect(pipe.x, bottomPipeTopY, PIPE_WIDTH, canvas.height - bottomPipeTopY);
+            }
+        }
+
+        function drawBackground() {
+            // Clear canvas with sky blue
+            ctx.fillStyle = '#87CEEB';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Optional: Add simple ground
+            ctx.fillStyle = '#8B4513'; // Brown ground
+            ctx.fillRect(0, canvas.height - 20, canvas.width, 20);
+        }
+
+         function drawStartMessage() {
+            if (!gameStarted && !gameOver) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+                ctx.font = `${canvas.width * 0.05}px 'Press Start 2P'`; // Responsive font size
+                ctx.textAlign = 'center';
+                ctx.fillText('Click or Tap', canvas.width / 2, canvas.height / 2 - 20);
+                ctx.fillText('to Start', canvas.width / 2, canvas.height / 2 + 20);
+            }
+        }
+
+
+        // --- Update Game State ---
+        function update() {
+            if (gameOver) return; // Don't update if game is over
+
+            // Bird physics
+            birdVelocityY += GRAVITY;
+            birdY += birdVelocityY;
+
+            // Pipe movement and generation
+            frameCount++;
+            // Generate new pipes at regular intervals (adjust frequency as needed)
+            // Increase frequency slightly based on score for difficulty scaling
+            const pipeGenerationInterval = Math.max(80, 120 - Math.floor(score / 5));
+            if (frameCount % pipeGenerationInterval === 0) {
+                generatePipePair();
+            }
+
+            // Move existing pipes and check for scoring
+            for (let i = pipes.length - 1; i >= 0; i--) {
+                pipes[i].x -= PIPE_SPEED;
+
+                // Check if bird passed the pipe
+                if (!pipes[i].passed && pipes[i].x + PIPE_WIDTH < birdX) {
+                    pipes[i].passed = true;
+                    score++;
+                    scoreDisplay.textContent = score;
+                    // Optional: Add sound effect here using Tone.js if desired
+                }
+
+                // Remove pipes that have moved off-screen
+                if (pipes[i].x + PIPE_WIDTH < 0) {
+                    pipes.splice(i, 1);
+                }
+            }
+
+            // Check for collisions
+            if (checkCollisions()) {
+                triggerGameOver();
+            }
+        }
+
+        // --- Main Drawing Function ---
+        function draw() {
+            drawBackground();
+            drawPipes();
+            drawBird();
+            drawStartMessage(); // Draw start message if game hasn't started
+        }
+
+        // --- Game Loop ---
+        function gameLoop() {
+            if (gameOver) return; // Stop the loop if game over
+
+            update(); // Update game state
+            draw();   // Draw the current frame
+
+            requestAnimationFrame(gameLoop); // Request the next frame
+        }
+
+        // --- Canvas Resizing ---
+        function resizeCanvas() {
+            // Get container dimensions (body or a specific wrapper)
+            const container = document.body;
+            const containerWidth = container.clientWidth - 20; // Account for padding
+            const containerHeight = container.clientHeight * 0.8 - 60; // Leave space for info text, adjust multiplier
+
+            // Calculate aspect ratio
+            const aspectRatio = 4 / 3;
+
+            // Calculate potential width/height based on container dimensions
+            let newWidth = containerWidth;
+            let newHeight = newWidth / aspectRatio;
+
+            // If calculated height is too large, recalculate based on height
+            if (newHeight > containerHeight) {
+                newHeight = containerHeight;
+                newWidth = newHeight * aspectRatio;
+            }
+
+            // Ensure minimum size
+            newWidth = Math.max(300, newWidth); // Min width 300px
+            newHeight = Math.max(225, newHeight); // Min height based on aspect ratio
+
+            canvas.width = newWidth;
+            canvas.height = newHeight;
+
+            // Reset game elements based on new size if game is not running or over
+             if (!gameStarted || gameOver) {
+                 resetGame(); // Re-initialize positions based on new size
+             } else {
+                 // If game is running, might need adjustments, but reset is simpler
+                 // For a more complex resize handling, you'd reposition elements proportionally
+                 draw(); // Redraw immediately after resize
+             }
+        }
+
+
+        // --- Initial Setup ---
+        window.addEventListener('resize', resizeCanvas); // Adjust canvas on window resize
+        window.onload = () => {
+            resizeCanvas(); // Initial size calculation and game reset
+        };
+
+    </script>
+
+</body>
+</html>
